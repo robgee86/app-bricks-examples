@@ -8,6 +8,7 @@ from calendar import timegm
 import feedparser
 
 from arduino.app_bricks.web_ui import WebUI
+from arduino.app_bricks.llm import LargeLanguageModel
 from arduino.app_utils import App, Bridge, Logger
 
 
@@ -17,6 +18,10 @@ POLL_INTERVAL_SECONDS = 10
 
 logger = Logger("rss-reader")
 logger.info(f"FEED_URL={FEED_URL} poll_interval={POLL_INTERVAL_SECONDS}s")
+
+prompt = "You are a news article summarizer. Respond with a few short markdown sentences. No preamble."
+llm = LargeLanguageModel(model="llamacpp:gemma-4-E2B-it-Q4_0_PURE", system_prompt=prompt)
+llm.with_memory(0)
 
 ui = WebUI()
 

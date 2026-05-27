@@ -4,3 +4,7 @@ description: A simple RSS reader application using Arduino bricks
 
 bricks:
   - arduino:web_ui
+  - arduino:llm:
+      variables:
+        X_LLAMA_ARG_CTX_SIZE: 65536
+        GENAI_CONTEXT_CAPPING: 65536
