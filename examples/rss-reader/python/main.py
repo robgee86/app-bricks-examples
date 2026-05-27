@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
+import time
 from calendar import timegm
 
 import feedparser
@@ -12,26 +13,33 @@ from arduino.app_utils import App, Logger
 
 FEED_URL = "http://192.168.1.5:7000/feed.xml"
 MAX_ARTICLES = 5
+POLL_INTERVAL_SECONDS = 10
 
 logger = Logger("rss-reader")
-logger.info(f"FEED_URL={FEED_URL}")
+logger.info(f"FEED_URL={FEED_URL} poll_interval={POLL_INTERVAL_SECONDS}s")
 
 ui = WebUI()
 
 articles: dict[str, dict] = {}
 
 
-def fetch_feed():
+def poll_feed():
     # feedparser.parse() sets bozo=1 on errors and leaves entries empty
     parsed = feedparser.parse(FEED_URL)
     if parsed.bozo and not parsed.entries:
         logger.warning(f"Could not read feed: {parsed.bozo_exception!r}")
+        time.sleep(POLL_INTERVAL_SECONDS)
         return
 
+    # Mirror the feed, keeping the entries we already know.
     global articles
     new_articles = {}
     for entry in parsed.entries:
         aid = str(entry.id)
+        if aid in articles:
+            new_articles[aid] = articles[aid]
+            continue
+
         summary = entry.get("summary", "")
         summary_type = getattr(entry, "summary_detail", {}).get("type", "text/plain")
         if entry.get("content"):
@@ -56,10 +64,8 @@ def fetch_feed():
         del new_articles[oldest]
     articles = new_articles
 
-    # Display the fetched articles through the brick's logger.
-    logger.info(f"Fetched {len(articles)} articles:")
-    for article in articles.values():
-        logger.info(f"  - {article['title']}")
+    logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
+    time.sleep(POLL_INTERVAL_SECONDS)
 
 
 def articles_payload():
@@ -78,6 +84,4 @@ async def add_security_headers(request, call_next):
     return response
 
 
-fetch_feed()
-
-App.run()
+App.run(user_loop=poll_feed)
