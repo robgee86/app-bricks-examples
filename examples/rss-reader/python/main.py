@@ -53,6 +53,11 @@ def fetch_feed():
         del new_articles[oldest]
     articles = new_articles
 
+    # Display the fetched articles in the console.
+    print(f"Fetched {len(articles)} articles:")
+    for article in articles.values():
+        print(f"  - {article['title']}")
+
 
 fetch_feed()
 
