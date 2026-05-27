@@ -6,6 +6,7 @@
   const feedPanelEl = document.getElementById("feed-panel");
   const listEl = document.getElementById("article-list");
   const emptyEl = document.getElementById("empty-state");
+  const reloadBtn = document.getElementById("reload-btn");
 
   const detailEl = document.getElementById("article-detail");
   const detailTitleEl = document.getElementById("detail-title");
@@ -218,6 +219,8 @@
         render();
       });
   }
+
+  reloadBtn.addEventListener("click", loadArticles);
 
   render();
   loadArticles();
