@@ -27,6 +27,10 @@ SPDX-License-Identifier: MPL-2.0
             <p class="arduino-text">RSS Reader</p>
           </div>
           <div class="header-right">
+            <span id="connection-status" class="connection-status" data-state="connecting">
+              <span class="connection-dot"></span>
+              <span class="connection-label">Connecting</span>
+            </span>
             <span id="unread-chip" class="unread-chip">
               <span class="unread-count" id="unread-count">0</span>
               <span class="unread-label">unread</span>
@@ -38,9 +42,6 @@ SPDX-License-Identifier: MPL-2.0
           <section class="feed-panel" id="feed-panel">
             <div class="feed-panel-header">
               <h2 class="feed-title">Latest articles</h2>
-              <button id="reload-btn" class="ghost-btn" type="button">
-                Reload
-              </button>
               <button id="mark-all-read" class="ghost-btn" type="button">
                 Mark all as read
               </button>

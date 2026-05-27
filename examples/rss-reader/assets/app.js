@@ -3,13 +3,16 @@
 // SPDX-License-Identifier: MPL-2.0
 
 (() => {
+  const socket = io(`${window.location.protocol}//${window.location.host}`);
+
   const feedPanelEl = document.getElementById("feed-panel");
   const listEl = document.getElementById("article-list");
   const emptyEl = document.getElementById("empty-state");
-  const reloadBtn = document.getElementById("reload-btn");
   const unreadCountEl = document.getElementById("unread-count");
   const unreadChipEl = document.getElementById("unread-chip");
   const markAllBtn = document.getElementById("mark-all-read");
+  const connectionEl = document.getElementById("connection-status");
+  const connectionLabelEl = connectionEl.querySelector(".connection-label");
 
   const detailEl = document.getElementById("article-detail");
   const detailTitleEl = document.getElementById("detail-title");
@@ -29,13 +32,28 @@
     }
   });
 
+  function setConnectionState(state, label) {
+    connectionEl.dataset.state = state;
+    connectionLabelEl.textContent = label;
+  }
+
+  socket.on("connect", () => setConnectionState("connected", "Live"));
+  socket.on("disconnect", () => setConnectionState("disconnected", "Offline"));
+  socket.io.on("reconnect_attempt", () =>
+    setConnectionState("connecting", "Reconnecting")
+  );
+  socket.on("articles_update", (payload) => {
+    articles = Array.isArray(payload?.articles) ? payload.articles : [];
+    if (selectedId && !articles.some((a) => a.id === selectedId)) {
+      selectedId = null;
+    }
+    render();
+  });
+
   markAllBtn.addEventListener("click", () => {
     articles
       .filter((a) => !a.read)
-      .forEach((a) => {
-        a.read = true;
-      });
-    render();
+      .forEach((a) => socket.emit("mark_read", { id: a.id }));
   });
 
   backBtn.addEventListener("click", () => {
@@ -46,7 +64,9 @@
   detailToggleBtn.addEventListener("click", () => {
     const article = currentSelection();
     if (!article) return;
-    article.read = !article.read;
+    const next = !article.read;
+    article.read = next;
+    socket.emit(next ? "mark_read" : "mark_unread", { id: article.id });
     render();
   });
 
@@ -55,6 +75,7 @@
     const article = articles.find((a) => a.id === id);
     if (article && !article.read) {
       article.read = true;
+      socket.emit("mark_read", { id });
     }
     render();
   }
@@ -251,17 +272,4 @@
     }
   }
 
-  function loadArticles() {
-    fetch("/articles")
-      .then((response) => (response.ok ? response.json() : []))
-      .then((data) => {
-        articles = Array.isArray(data) ? data : [];
-        render();
-      });
-  }
-
-  reloadBtn.addEventListener("click", loadArticles);
-
-  render();
-  loadArticles();
 })();

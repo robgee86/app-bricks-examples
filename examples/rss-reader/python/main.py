@@ -23,6 +23,11 @@ ui = WebUI()
 articles: dict[str, dict] = {}
 
 
+def broadcast_articles(room: str | None = None):
+    snapshot = sorted(articles.values(), key=lambda a: a["published"], reverse=True)
+    ui.send_message("articles_update", {"articles": snapshot}, room=room)
+
+
 def poll_feed():
     # feedparser.parse() sets bozo=1 on errors and leaves entries empty
     parsed = feedparser.parse(FEED_URL)
@@ -65,15 +70,22 @@ def poll_feed():
     articles = new_articles
 
     logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
+    broadcast_articles()
+
     time.sleep(POLL_INTERVAL_SECONDS)
 
 
-def articles_payload():
-    # Newest first — the UI renders them in this order.
-    return sorted(articles.values(), key=lambda a: a["published"], reverse=True)
+def set_read(data, value: bool):
+    article = articles.get(data["id"])
+    if article is None or article["read"] == value:
+        return
+    article["read"] = value
+    broadcast_articles()
 
 
-ui.expose_api("GET", "/articles", articles_payload)
+ui.on_connect(lambda sid: broadcast_articles(room=sid))
+ui.on_message("mark_read", lambda _sid, data: set_read(data, True))
+ui.on_message("mark_unread", lambda _sid, data: set_read(data, False))
 
 
 @ui.app.middleware("http")
