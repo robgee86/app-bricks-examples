@@ -1,0 +1,6 @@
+name: RSS server
+icon: 📡
+description: Demo RSS feed server, used as the data source for the rss-reader example
+
+bricks:
+  - arduino:web_ui

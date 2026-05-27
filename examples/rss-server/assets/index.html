@@ -1,0 +1,165 @@
+<!--
+SPDX-FileCopyrightText: Copyright (C) Arduino s.r.l. and/or its affiliated companies
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSS Server</title>
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <style>
+      :root {
+        --teal: #008184;
+        --teal-dark: #006567;
+        --bg: #dae3e3;
+        --surface: #ecf1f1;
+        --surface-strong: #ffffff;
+        --border: #c9d2d2;
+        --text: #2c353a;
+        --text-muted: #5d6a6b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 520px;
+        background: var(--surface-strong);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(44, 53, 58, 0.08);
+        padding: 28px;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .logo {
+        width: 32px;
+        height: 32px;
+      }
+      .header h1 {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .status {
+        margin: 0 0 18px;
+        font-size: 0.95rem;
+        color: var(--text-muted);
+      }
+      .status strong {
+        color: var(--teal);
+        font-size: 1.05rem;
+      }
+      .buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 22px;
+      }
+      button {
+        flex: 1;
+        appearance: none;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 150ms ease, border-color 150ms ease,
+          color 150ms ease, opacity 150ms ease;
+      }
+      .primary {
+        background: var(--teal);
+        border: 1px solid var(--teal);
+        color: #fff;
+      }
+      .primary:hover:not(:disabled) {
+        background: var(--teal-dark);
+        border-color: var(--teal-dark);
+      }
+      .ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .ghost:hover:not(:disabled) {
+        border-color: var(--teal);
+        color: var(--teal);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .list-title {
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin: 0 0 8px;
+      }
+      ol {
+        margin: 0;
+        padding-left: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      li {
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .empty {
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <img
+          src="img/RGB-Arduino-Logo-Color-Inline-Loop.svg"
+          alt="Arduino Logo"
+          class="logo"
+        />
+        <h1>RSS Server</h1>
+      </div>
+
+      <p class="status">
+        Publishing <strong id="published">–</strong> of
+        <strong id="total">–</strong> articles
+      </p>
+
+      <div class="buttons">
+        <button id="reset" class="ghost" type="button">Reset</button>
+        <button id="remove" class="ghost" type="button">Remove one</button>
+        <button id="add" class="primary" type="button">Add one</button>
+      </div>
+
+      <p class="list-title">Currently published</p>
+      <ol id="article-list"></ol>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
