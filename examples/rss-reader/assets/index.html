@@ -1,0 +1,76 @@
+<!--
+SPDX-FileCopyrightText: Copyright (C) Arduino s.r.l. and/or its affiliated companies
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSS Reader</title>
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="stylesheet" href="fonts/fonts.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <main>
+        <div class="header">
+          <div class="header-left">
+            <img
+              src="img/RGB-Arduino-Logo-Color-Inline-Loop.svg"
+              alt="Arduino Logo"
+              class="arduino-logo"
+            />
+            <p class="arduino-text">RSS Reader</p>
+          </div>
+          <div class="header-right"></div>
+        </div>
+
+        <div class="main-content">
+          <section class="feed-panel" id="feed-panel">
+            <div class="feed-panel-header">
+              <h2 class="feed-title">Latest articles</h2>
+            </div>
+
+            <ul id="article-list" class="article-list" aria-live="polite"></ul>
+
+            <div id="empty-state" class="empty-state" hidden>
+              <p class="empty-title">Waiting for articles…</p>
+              <p class="empty-subtitle">
+                Make sure the demo RSS server is running, then this list will
+                populate automatically.
+              </p>
+            </div>
+          </section>
+
+          <section class="article-detail" id="article-detail" hidden>
+            <button id="back-btn" class="ghost-btn back-btn" type="button">
+              ← Back to articles
+            </button>
+            <article class="detail-card">
+              <p class="detail-eyebrow">Article</p>
+              <h1 class="detail-title" id="detail-title"></h1>
+              <div class="detail-meta" id="detail-meta"></div>
+              <div class="detail-body" id="detail-body"></div>
+              <footer class="detail-footer">
+                <button
+                  id="detail-toggle-read"
+                  class="ghost-btn"
+                  type="button"
+                ></button>
+              </footer>
+            </article>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="libs/socket.io.min.js"></script>
+    <script src="libs/marked.min.js"></script>
+    <script src="libs/purify.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

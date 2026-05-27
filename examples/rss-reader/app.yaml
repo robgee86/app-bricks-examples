@@ -1,0 +1,6 @@
+name: RSS reader
+icon: 🗞️
+description: A simple RSS reader application using Arduino bricks
+
+bricks:
+  - arduino:web_ui
