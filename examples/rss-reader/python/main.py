@@ -8,7 +8,7 @@ from calendar import timegm
 import feedparser
 
 from arduino.app_bricks.web_ui import WebUI
-from arduino.app_utils import App, Logger
+from arduino.app_utils import App, Bridge, Logger
 
 
 FEED_URL = "http://192.168.1.5:7000/feed.xml"
@@ -26,6 +26,12 @@ articles: dict[str, dict] = {}
 def broadcast_articles(room: str | None = None):
     snapshot = sorted(articles.values(), key=lambda a: a["published"], reverse=True)
     ui.send_message("articles_update", {"articles": snapshot}, room=room)
+
+
+def notify_unread():
+    # Tell the sketch how many unread articles there are, over the Bridge.
+    count = sum(1 for a in articles.values() if not a["read"])
+    Bridge.notify("unread_count", count)
 
 
 def poll_feed():
@@ -71,6 +77,7 @@ def poll_feed():
 
     logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
     broadcast_articles()
+    notify_unread()
 
     time.sleep(POLL_INTERVAL_SECONDS)
 
@@ -81,6 +88,7 @@ def set_read(data, value: bool):
         return
     article["read"] = value
     broadcast_articles()
+    notify_unread()
 
 
 ui.on_connect(lambda sid: broadcast_articles(room=sid))
