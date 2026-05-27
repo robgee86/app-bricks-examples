@@ -26,6 +26,7 @@ llm.with_memory(0)
 ui = WebUI()
 
 articles: dict[str, dict] = {}
+abstracts: dict[str, str] = {}  # article id -> cached LLM abstract
 
 
 def broadcast_articles(room: str | None = None):
@@ -80,6 +81,10 @@ def poll_feed():
         del new_articles[oldest]
     articles = new_articles
 
+    # Drop cached abstracts for articles that left the feed.
+    for stale in [aid for aid in abstracts if aid not in articles]:
+        del abstracts[stale]
+
     logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
     broadcast_articles()
     notify_unread()
@@ -96,9 +101,27 @@ def set_read(data, value: bool):
     notify_unread()
 
 
+def make_abstract(sid, data):
+    aid = (data or {}).get("id")
+    if not aid or aid not in articles:
+        return
+    text = abstracts.get(aid)
+    if text is None:
+        logger.info(f"Generating abstract for {aid}")
+        try:
+            text = llm.chat(articles[aid]["content"][:6000])
+        except Exception as e:
+            logger.error(f"Abstract generation failed for {aid}: {e}")
+            ui.send_message("abstract", {"id": aid, "error": True}, room=sid)
+            return
+        abstracts[aid] = text
+    ui.send_message("abstract", {"id": aid, "text": text}, room=sid)
+
+
 ui.on_connect(lambda sid: broadcast_articles(room=sid))
 ui.on_message("mark_read", lambda _sid, data: set_read(data, True))
 ui.on_message("mark_unread", lambda _sid, data: set_read(data, False))
+ui.on_message("request_abstract", make_abstract)
 
 
 @ui.app.middleware("http")

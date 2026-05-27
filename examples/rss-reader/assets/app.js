@@ -20,9 +20,11 @@
   const detailBodyEl = document.getElementById("detail-body");
   const detailToggleBtn = document.getElementById("detail-toggle-read");
   const backBtn = document.getElementById("back-btn");
+  const abstractContentEl = document.getElementById("abstract-content");
 
   let articles = [];
   let selectedId = null;
+  const abstracts = {}; // id -> text (string = ready, null = pending)
 
   // Open sanitized links in a new tab without leaking the referrer.
   DOMPurify.addHook("afterSanitizeAttributes", (node) => {
@@ -48,6 +50,16 @@
       selectedId = null;
     }
     render();
+  });
+
+  socket.on("abstract", (payload) => {
+    const id = payload?.id;
+    if (!id) return;
+    abstracts[id] = payload.error
+      ? "Couldn't generate an abstract for this article."
+      : payload.text || "";
+    const sel = currentSelection();
+    if (sel && sel.id === id) renderAbstract(sel);
   });
 
   markAllBtn.addEventListener("click", () => {
@@ -150,6 +162,8 @@
       detailMetaEl.appendChild(dateNode);
     }
 
+    renderAbstract(article);
+
     const body = article.content || article.summary;
     const type = article.content_type || "text/markdown";
     // Markdown -> HTML via marked; HTML feeds pass through as-is.
@@ -164,6 +178,27 @@
     detailToggleBtn.textContent = article.read
       ? "Mark as unread"
       : "Mark as read";
+  }
+
+  // Show the cached abstract, or a skeleton while the LLM generates it
+  function renderAbstract(article) {
+    const cached = abstracts[article.id];
+    if (typeof cached === "string") {
+      abstractContentEl.innerHTML = DOMPurify.sanitize(marked.parse(cached));
+      return;
+    }
+    const skeleton = document.createElement("div");
+    skeleton.className = "skeleton";
+    for (let i = 0; i < 3; i++) {
+      const line = document.createElement("div");
+      line.className = "skeleton-line";
+      skeleton.appendChild(line);
+    }
+    abstractContentEl.replaceChildren(skeleton);
+    if (cached === undefined) {
+      abstracts[article.id] = null; // mark requested
+      socket.emit("request_abstract", { id: article.id });
+    }
   }
 
   function buildArticleNode(article) {
