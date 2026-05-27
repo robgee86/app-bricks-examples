@@ -62,6 +62,22 @@ def fetch_feed():
         logger.info(f"  - {article['title']}")
 
 
+def articles_payload():
+    # Newest first — the UI renders them in this order.
+    return sorted(articles.values(), key=lambda a: a["published"], reverse=True)
+
+
+ui.expose_api("GET", "/articles", articles_payload)
+
+
+@ui.app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' https: data:; frame-ancestors 'none'"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 fetch_feed()
 
 App.run()

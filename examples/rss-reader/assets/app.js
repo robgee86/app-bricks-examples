@@ -210,5 +210,15 @@
     }
   }
 
+  function loadArticles() {
+    fetch("/articles")
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        articles = Array.isArray(data) ? data : [];
+        render();
+      });
+  }
+
   render();
+  loadArticles();
 })();
