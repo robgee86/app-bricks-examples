@@ -7,6 +7,9 @@
   const listEl = document.getElementById("article-list");
   const emptyEl = document.getElementById("empty-state");
   const reloadBtn = document.getElementById("reload-btn");
+  const unreadCountEl = document.getElementById("unread-count");
+  const unreadChipEl = document.getElementById("unread-chip");
+  const markAllBtn = document.getElementById("mark-all-read");
 
   const detailEl = document.getElementById("article-detail");
   const detailTitleEl = document.getElementById("detail-title");
@@ -26,6 +29,36 @@
     }
   });
 
+  markAllBtn.addEventListener("click", () => {
+    articles
+      .filter((a) => !a.read)
+      .forEach((a) => {
+        a.read = true;
+      });
+    render();
+  });
+
+  backBtn.addEventListener("click", () => {
+    selectedId = null;
+    render();
+  });
+
+  detailToggleBtn.addEventListener("click", () => {
+    const article = currentSelection();
+    if (!article) return;
+    article.read = !article.read;
+    render();
+  });
+
+  function selectArticle(id) {
+    selectedId = id;
+    const article = articles.find((a) => a.id === id);
+    if (article && !article.read) {
+      article.read = true;
+    }
+    render();
+  }
+
   function currentSelection() {
     return selectedId ? articles.find((a) => a.id === selectedId) : null;
   }
@@ -41,6 +74,11 @@
       feedPanelEl.hidden = false;
       renderList();
     }
+
+    const unread = articles.filter((a) => !a.read).length;
+    unreadCountEl.textContent = String(unread);
+    unreadChipEl.dataset.empty = unread === 0 ? "true" : "false";
+    markAllBtn.disabled = unread === 0;
   }
 
   function renderList() {
@@ -136,6 +174,8 @@
 
     li.appendChild(dot);
     li.appendChild(body);
+
+    li.addEventListener("click", () => selectArticle(article.id));
 
     updateArticleNode(li, article);
     return li;
