@@ -1,0 +1,160 @@
+diff --git a/assets/app.js b/assets/app.js
+index 744feab..d3c6dcb 100644
+--- a/assets/app.js
++++ b/assets/app.js
+@@ -3,13 +3,16 @@
+ // SPDX-License-Identifier: MPL-2.0
+ 
+ (() => {
++  const socket = io(`${window.location.protocol}//${window.location.host}`);
++
+   const feedPanelEl = document.getElementById("feed-panel");
+   const listEl = document.getElementById("article-list");
+   const emptyEl = document.getElementById("empty-state");
+-  const reloadBtn = document.getElementById("reload-btn");
+   const unreadCountEl = document.getElementById("unread-count");
+   const unreadChipEl = document.getElementById("unread-chip");
+   const markAllBtn = document.getElementById("mark-all-read");
++  const connectionEl = document.getElementById("connection-status");
++  const connectionLabelEl = connectionEl.querySelector(".connection-label");
+ 
+   const detailEl = document.getElementById("article-detail");
+   const detailTitleEl = document.getElementById("detail-title");
+@@ -29,13 +32,28 @@
+     }
+   });
+ 
++  function setConnectionState(state, label) {
++    connectionEl.dataset.state = state;
++    connectionLabelEl.textContent = label;
++  }
++
++  socket.on("connect", () => setConnectionState("connected", "Live"));
++  socket.on("disconnect", () => setConnectionState("disconnected", "Offline"));
++  socket.io.on("reconnect_attempt", () =>
++    setConnectionState("connecting", "Reconnecting")
++  );
++  socket.on("articles_update", (payload) => {
++    articles = Array.isArray(payload?.articles) ? payload.articles : [];
++    if (selectedId && !articles.some((a) => a.id === selectedId)) {
++      selectedId = null;
++    }
++    render();
++  });
++
+   markAllBtn.addEventListener("click", () => {
+     articles
+       .filter((a) => !a.read)
+-      .forEach((a) => {
+-        a.read = true;
+-      });
+-    render();
++      .forEach((a) => socket.emit("mark_read", { id: a.id }));
+   });
+ 
+   backBtn.addEventListener("click", () => {
+@@ -46,7 +64,9 @@
+   detailToggleBtn.addEventListener("click", () => {
+     const article = currentSelection();
+     if (!article) return;
+-    article.read = !article.read;
++    const next = !article.read;
++    article.read = next;
++    socket.emit(next ? "mark_read" : "mark_unread", { id: article.id });
+     render();
+   });
+ 
+@@ -55,6 +75,7 @@
+     const article = articles.find((a) => a.id === id);
+     if (article && !article.read) {
+       article.read = true;
++      socket.emit("mark_read", { id });
+     }
+     render();
+   }
+@@ -251,17 +272,4 @@
+     }
+   }
+ 
+-  function loadArticles() {
+-    fetch("/articles")
+-      .then((response) => (response.ok ? response.json() : []))
+-      .then((data) => {
+-        articles = Array.isArray(data) ? data : [];
+-        render();
+-      });
+-  }
+-
+-  reloadBtn.addEventListener("click", loadArticles);
+-
+-  render();
+-  loadArticles();
+ })();
+diff --git a/assets/index.html b/assets/index.html
+index 323e23e..ff4f522 100644
+--- a/assets/index.html
++++ b/assets/index.html
+@@ -27,6 +27,10 @@ SPDX-License-Identifier: MPL-2.0
+             <p class="arduino-text">RSS Reader</p>
+           </div>
+           <div class="header-right">
++            <span id="connection-status" class="connection-status" data-state="connecting">
++              <span class="connection-dot"></span>
++              <span class="connection-label">Connecting</span>
++            </span>
+             <span id="unread-chip" class="unread-chip">
+               <span class="unread-count" id="unread-count">0</span>
+               <span class="unread-label">unread</span>
+@@ -38,9 +42,6 @@ SPDX-License-Identifier: MPL-2.0
+           <section class="feed-panel" id="feed-panel">
+             <div class="feed-panel-header">
+               <h2 class="feed-title">Latest articles</h2>
+-              <button id="reload-btn" class="ghost-btn" type="button">
+-                Reload
+-              </button>
+               <button id="mark-all-read" class="ghost-btn" type="button">
+                 Mark all as read
+               </button>
+diff --git a/python/main.py b/python/main.py
+index 8fb21c7..2b379f8 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -23,6 +23,11 @@ ui = WebUI()
+ articles: dict[str, dict] = {}
+ 
+ 
++def broadcast_articles(room: str | None = None):
++    snapshot = sorted(articles.values(), key=lambda a: a["published"], reverse=True)
++    ui.send_message("articles_update", {"articles": snapshot}, room=room)
++
++
+ def poll_feed():
+     # feedparser.parse() sets bozo=1 on errors and leaves entries empty
+     parsed = feedparser.parse(FEED_URL)
+@@ -65,15 +70,22 @@ def poll_feed():
+     articles = new_articles
+ 
+     logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
++    broadcast_articles()
++
+     time.sleep(POLL_INTERVAL_SECONDS)
+ 
+ 
+-def articles_payload():
+-    # Newest first — the UI renders them in this order.
+-    return sorted(articles.values(), key=lambda a: a["published"], reverse=True)
++def set_read(data, value: bool):
++    article = articles.get(data["id"])
++    if article is None or article["read"] == value:
++        return
++    article["read"] = value
++    broadcast_articles()
+ 
+ 
+-ui.expose_api("GET", "/articles", articles_payload)
++ui.on_connect(lambda sid: broadcast_articles(room=sid))
++ui.on_message("mark_read", lambda _sid, data: set_read(data, True))
++ui.on_message("mark_unread", lambda _sid, data: set_read(data, False))
+ 
+ 
+ @ui.app.middleware("http")

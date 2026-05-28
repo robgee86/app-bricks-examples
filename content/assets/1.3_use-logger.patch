@@ -1,0 +1,44 @@
+diff --git a/python/main.py b/python/main.py
+index e05490f..c7928ec 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -7,12 +7,15 @@ from calendar import timegm
+ import feedparser
+ 
+ from arduino.app_bricks.web_ui import WebUI
+-from arduino.app_utils import App
++from arduino.app_utils import App, Logger
+ 
+ 
+ FEED_URL = "http://192.168.1.5:7000/feed.xml"
+ MAX_ARTICLES = 5
+ 
++logger = Logger("rss-reader")
++logger.info(f"FEED_URL={FEED_URL}")
++
+ ui = WebUI()
+ 
+ articles: dict[str, dict] = {}
+@@ -22,7 +25,7 @@ def fetch_feed():
+     # feedparser.parse() sets bozo=1 on errors and leaves entries empty
+     parsed = feedparser.parse(FEED_URL)
+     if parsed.bozo and not parsed.entries:
+-        print(f"Could not read feed: {parsed.bozo_exception!r}")
++        logger.warning(f"Could not read feed: {parsed.bozo_exception!r}")
+         return
+ 
+     global articles
+@@ -53,10 +56,10 @@ def fetch_feed():
+         del new_articles[oldest]
+     articles = new_articles
+ 
+-    # Display the fetched articles in the console.
+-    print(f"Fetched {len(articles)} articles:")
++    # Display the fetched articles through the brick's logger.
++    logger.info(f"Fetched {len(articles)} articles:")
+     for article in articles.values():
+-        print(f"  - {article['title']}")
++        logger.info(f"  - {article['title']}")
+ 
+ 
+ fetch_feed()

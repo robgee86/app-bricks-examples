@@ -1,0 +1,16 @@
+diff --git a/python/main.py b/python/main.py
+index feb1f20..e05490f 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -53,6 +53,11 @@ def fetch_feed():
+         del new_articles[oldest]
+     articles = new_articles
+ 
++    # Display the fetched articles in the console.
++    print(f"Fetched {len(articles)} articles:")
++    for article in articles.values():
++        print(f"  - {article['title']}")
++
+ 
+ fetch_feed()
+ 

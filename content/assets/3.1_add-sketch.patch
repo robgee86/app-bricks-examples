@@ -1,0 +1,29 @@
+diff --git a/sketch/sketch.ino b/sketch/sketch.ino
+new file mode 100644
+index 0000000..0eeb35b
+--- /dev/null
++++ b/sketch/sketch.ino
+@@ -0,0 +1,12 @@
++// SPDX-FileCopyrightText: Copyright (C) Arduino s.r.l. and/or its affiliated companies
++//
++// SPDX-License-Identifier: MPL-2.0
++
++void setup() {
++  Serial.begin(9600);
++  Serial.println("RSS reader sketch ready");
++}
++
++void loop() {
++  delay(1000);
++}
+diff --git a/sketch/sketch.yaml b/sketch/sketch.yaml
+new file mode 100644
+index 0000000..ffa1a30
+--- /dev/null
++++ b/sketch/sketch.yaml
+@@ -0,0 +1,5 @@
++profiles:
++  default:
++    platforms:
++      - platform: arduino:zephyr
++default_profile: default

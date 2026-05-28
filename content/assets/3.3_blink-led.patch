@@ -1,0 +1,36 @@
+diff --git a/sketch/sketch.ino b/sketch/sketch.ino
+index f5812c6..f272a5b 100644
+--- a/sketch/sketch.ino
++++ b/sketch/sketch.ino
+@@ -4,18 +4,29 @@
+ 
+ #include <Arduino_RouterBridge.h>
+ 
++volatile int unread_count = 0;
++
+ void on_unread_count(int count) {
++  unread_count = count;
+   Serial.print("Unread articles: ");
+   Serial.println(count);
+ }
+ 
+ void setup() {
+   Serial.begin(9600);
+-  Serial.println("RSS reader sketch ready");
+   Bridge.begin();
+   Bridge.provide("unread_count", on_unread_count);
+ }
+ 
+ void loop() {
+-  delay(1000);
++  if (unread_count > 0) {
++    // Blink while there are unread articles.
++    digitalWrite(LED_BUILTIN, HIGH);
++    delay(300);
++    digitalWrite(LED_BUILTIN, LOW);
++    delay(300);
++  } else {
++    digitalWrite(LED_BUILTIN, LOW);
++    delay(300);
++  }
+ }

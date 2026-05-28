@@ -1,0 +1,313 @@
+diff --git a/app.yaml b/app.yaml
+index b06cb1a..706b459 100644
+--- a/app.yaml
++++ b/app.yaml
+@@ -8,3 +8,4 @@ bricks:
+       variables:
+         X_LLAMA_ARG_CTX_SIZE: 65536
+         GENAI_CONTEXT_CAPPING: 65536
++  - rss-reader:
+diff --git a/bricks/rss_reader/__init__.py b/bricks/rss_reader/__init__.py
+new file mode 100644
+index 0000000..8bbc870
+--- /dev/null
++++ b/bricks/rss_reader/__init__.py
+@@ -0,0 +1,130 @@
++# SPDX-FileCopyrightText: Copyright (C) Arduino s.r.l. and/or its affiliated companies
++#
++# SPDX-License-Identifier: MPL-2.0
++
++import time
++from calendar import timegm
++from dataclasses import dataclass
++from typing import Callable
++
++import feedparser
++
++from arduino.app_utils import brick, Logger
++
++
++logger = Logger("rss-reader-brick")
++
++
++@dataclass
++class Article:
++    id: str
++    title: str
++    summary: str
++    summary_type: str
++    content: str
++    content_type: str
++    published: int  # epoch milliseconds
++    read: bool = False
++
++
++@brick
++class RSSReader:
++    """
++    Polls an RSS feed and notifies subscribers via two callbacks:
++    `on_new_articles` (fires with just the newly-arrived entries) and
++    `on_snapshot` (fires with the full sorted snapshot after every change).
++    """
++
++    def __init__(
++        self,
++        feed_url: str,
++        poll_interval_seconds: int = 10,
++        max_articles: int = 5,
++    ):
++        self._feed_url = feed_url
++        self._poll_interval = poll_interval_seconds
++        self._max = max_articles
++        self._articles: dict[str, Article] = {}
++        self._on_new: Callable[[list[Article]], None] | None = None
++        self._on_snapshot: Callable[[list[Article]], None] | None = None
++
++    def on_new_articles(self, cb: Callable[[list[Article]], None]):
++        """
++        Register a callback fired with the list of just-arrived articles
++        every time the poll loop discovers any new entry.
++        """
++        self._on_new = cb
++
++    def on_snapshot(self, cb: Callable[[list[Article]], None]):
++        """
++        Register a callback fired with the full sorted snapshot whenever
++        the article set or any article's read state changes.
++        """
++        self._on_snapshot = cb
++
++    def snapshot(self) -> list[Article]:
++        """Return the current articles sorted newest-first."""
++        return sorted(self._articles.values(), key=lambda a: a.published, reverse=True)
++
++    def mark_read(self, aid: str, value: bool):
++        """Flip an article's read flag; no-op if unchanged. Fires `on_snapshot`."""
++        a = self._articles.get(aid)
++        if a is None or a.read == value:
++            return
++        a.read = value
++        self._fire_snapshot()
++
++    @brick.loop
++    def _poll(self):
++        # feedparser.parse() sets bozo=1 on errors and leaves entries empty.
++        parsed = feedparser.parse(self._feed_url)
++        if parsed.bozo and not parsed.entries:
++            logger.warning(f"Could not read feed: {parsed.bozo_exception!r}")
++            time.sleep(self._poll_interval)
++            return
++
++        # Mirror the feed, keeping the entries we already know
++        new_articles: dict[str, Article] = {}
++        newly_arrived: list[Article] = []
++        for entry in parsed.entries:
++            aid = str(entry.id)
++            if aid in self._articles:
++                new_articles[aid] = self._articles[aid]
++                continue
++
++            summary = entry.get("summary", "")
++            summary_type = getattr(entry, "summary_detail", {}).get("type", "text/plain")
++            if entry.get("content"):
++                detail = entry.content[0]
++                content = detail.get("value", "")
++                content_type = detail.get("type", "text/html")
++            else:
++                content = summary
++                content_type = summary_type
++            a = Article(
++                id=aid,
++                title=str(entry.title),
++                summary=str(summary),
++                summary_type=str(summary_type),
++                content=str(content),
++                content_type=str(content_type),
++                published=int(timegm(entry.published_parsed) * 1000),  # type: ignore[arg-type]
++            )
++            new_articles[aid] = a
++            newly_arrived.append(a)
++
++        while len(new_articles) > self._max:
++            oldest = min(new_articles, key=lambda i: new_articles[i].published)
++            del new_articles[oldest]
++
++        self._articles = new_articles
++        logger.info(f"{len(parsed.entries)} entries received, {len(self._articles)} stored")
++
++        if newly_arrived and self._on_new:
++            self._on_new(newly_arrived)
++        self._fire_snapshot()
++        time.sleep(self._poll_interval)
++
++    def _fire_snapshot(self):
++        if self._on_snapshot:
++            self._on_snapshot(self.snapshot())
+diff --git a/bricks/rss_reader/brick_config.yaml b/bricks/rss_reader/brick_config.yaml
+new file mode 100644
+index 0000000..58ecb97
+--- /dev/null
++++ b/bricks/rss_reader/brick_config.yaml
+@@ -0,0 +1,3 @@
++id: rss-reader
++name: RSS Reader
++description: Polls an RSS feed and exposes callbacks.
+diff --git a/python/main.py b/python/main.py
+index 1c5e32f..4d3ee48 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -2,114 +2,69 @@
+ #
+ # SPDX-License-Identifier: MPL-2.0
+ 
+-import time
+-from calendar import timegm
+-
+-import feedparser
++from dataclasses import asdict
+ 
+ from arduino.app_bricks.web_ui import WebUI
+ from arduino.app_bricks.llm import LargeLanguageModel
+ from arduino.app_utils import App, Bridge, Logger
+ 
++from bricks.rss_reader import Article, RSSReader
++
+ 
+ FEED_URL = "http://192.168.1.5:7000/feed.xml"
+-MAX_ARTICLES = 5
+-POLL_INTERVAL_SECONDS = 10
+ 
+ logger = Logger("rss-reader")
+-logger.info(f"FEED_URL={FEED_URL} poll_interval={POLL_INTERVAL_SECONDS}s")
+ 
+ prompt = "You are a news article summarizer. Respond with a few short markdown sentences. No preamble."
+ llm = LargeLanguageModel(model="llamacpp:gemma-4-E2B-it-Q4_0_PURE", system_prompt=prompt)
+ llm.with_memory(0)
+ 
++reader = RSSReader(FEED_URL)
+ ui = WebUI()
+ 
+-articles: dict[str, dict] = {}
+ abstracts: dict[str, str] = {}  # article id -> cached LLM abstract
+ 
+ 
+-def broadcast_articles(room: str | None = None):
+-    snapshot = sorted(articles.values(), key=lambda a: a["published"], reverse=True)
+-    ui.send_message("articles_update", {"articles": snapshot}, room=room)
++def broadcast_articles(snapshot: list[Article], room: str | None = None):
++    ui.send_message("articles_update", {"articles": [asdict(a) for a in snapshot]}, room=room)
+ 
+ 
+-def notify_unread():
++def notify_unread(snapshot: list[Article]):
+     # Tell the sketch how many unread articles there are, over the Bridge.
+-    count = sum(1 for a in articles.values() if not a["read"])
++    count = sum(1 for a in snapshot if not a.read)
+     Bridge.notify("unread_count", count)
+ 
+ 
+-def poll_feed():
+-    # feedparser.parse() sets bozo=1 on errors and leaves entries empty
+-    parsed = feedparser.parse(FEED_URL)
+-    if parsed.bozo and not parsed.entries:
+-        logger.warning(f"Could not read feed: {parsed.bozo_exception!r}")
+-        time.sleep(POLL_INTERVAL_SECONDS)
+-        return
+-
+-    # Mirror the feed, keeping the entries we already know.
+-    global articles
+-    new_articles = {}
+-    for entry in parsed.entries:
+-        aid = str(entry.id)
+-        if aid in articles:
+-            new_articles[aid] = articles[aid]
+-            continue
+-
+-        summary = entry.get("summary", "")
+-        summary_type = getattr(entry, "summary_detail", {}).get("type", "text/plain")
+-        if entry.get("content"):
+-            detail = entry.content[0]
+-            content = detail.get("value", "")
+-            content_type = detail.get("type", "text/html")
+-        else:
+-            content = summary
+-            content_type = summary_type
+-        new_articles[aid] = {
+-            "id": aid,
+-            "title": entry.title,
+-            "summary": summary,
+-            "summary_type": summary_type,
+-            "content": content,
+-            "content_type": content_type,
+-            "published": int(timegm(entry.published_parsed) * 1000),  # type: ignore[arg-type]
+-            "read": False,
+-        }
+-    while len(new_articles) > MAX_ARTICLES:
+-        oldest = min(new_articles, key=lambda i: new_articles[i]["published"])
+-        del new_articles[oldest]
+-    articles = new_articles
+-
++def on_snapshot(snapshot: list[Article]):
++    broadcast_articles(snapshot)
++    notify_unread(snapshot)
+     # Drop cached abstracts for articles that left the feed.
+-    for stale in [aid for aid in abstracts if aid not in articles]:
++    ids = {a.id for a in snapshot}
++    for stale in [aid for aid in abstracts if aid not in ids]:
+         del abstracts[stale]
+ 
+-    logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
+-    broadcast_articles()
+-    notify_unread()
+ 
+-    time.sleep(POLL_INTERVAL_SECONDS)
++def on_new_articles(new: list[Article]):
++    titles = ", ".join(a.title for a in new)
++    logger.info(f"{len(new)} new article(s): {titles}")
+ 
+ 
+ def set_read(data, value: bool):
+-    article = articles.get(data["id"])
+-    if article is None or article["read"] == value:
+-        return
+-    article["read"] = value
+-    broadcast_articles()
+-    notify_unread()
++    reader.mark_read(data["id"], value)
+ 
+ 
+ def make_abstract(sid, data):
+     aid = (data or {}).get("id")
+-    if not aid or aid not in articles:
++    if not aid:
++        return
++    article = next((a for a in reader.snapshot() if a.id == aid), None)
++    if article is None:
+         return
+     text = abstracts.get(aid)
+     if text is None:
+         logger.info(f"Generating abstract for {aid}")
+         try:
+-            text = llm.chat(articles[aid]["content"][:6000])
++            text = llm.chat(article.content[:6000])
+         except Exception as e:
+             logger.error(f"Abstract generation failed for {aid}: {e}")
+             ui.send_message("abstract", {"id": aid, "error": True}, room=sid)
+@@ -118,7 +73,10 @@ def make_abstract(sid, data):
+     ui.send_message("abstract", {"id": aid, "text": text}, room=sid)
+ 
+ 
+-ui.on_connect(lambda sid: broadcast_articles(room=sid))
++reader.on_new_articles(on_new_articles)
++reader.on_snapshot(on_snapshot)
++
++ui.on_connect(lambda sid: broadcast_articles(reader.snapshot(), room=sid))
+ ui.on_message("mark_read", lambda _sid, data: set_read(data, True))
+ ui.on_message("mark_unread", lambda _sid, data: set_read(data, False))
+ ui.on_message("request_abstract", make_abstract)
+@@ -132,4 +90,4 @@ async def add_security_headers(request, call_next):
+     return response
+ 
+ 
+-App.run(user_loop=poll_feed)
++App.run()

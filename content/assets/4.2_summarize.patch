@@ -1,0 +1,136 @@
+diff --git a/assets/app.js b/assets/app.js
+index d3c6dcb..e0f9872 100644
+--- a/assets/app.js
++++ b/assets/app.js
+@@ -20,9 +20,11 @@
+   const detailBodyEl = document.getElementById("detail-body");
+   const detailToggleBtn = document.getElementById("detail-toggle-read");
+   const backBtn = document.getElementById("back-btn");
++  const abstractContentEl = document.getElementById("abstract-content");
+ 
+   let articles = [];
+   let selectedId = null;
++  const abstracts = {}; // id -> text (string = ready, null = pending)
+ 
+   // Open sanitized links in a new tab without leaking the referrer.
+   DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+@@ -50,6 +52,16 @@
+     render();
+   });
+ 
++  socket.on("abstract", (payload) => {
++    const id = payload?.id;
++    if (!id) return;
++    abstracts[id] = payload.error
++      ? "Couldn't generate an abstract for this article."
++      : payload.text || "";
++    const sel = currentSelection();
++    if (sel && sel.id === id) renderAbstract(sel);
++  });
++
+   markAllBtn.addEventListener("click", () => {
+     articles
+       .filter((a) => !a.read)
+@@ -150,6 +162,8 @@
+       detailMetaEl.appendChild(dateNode);
+     }
+ 
++    renderAbstract(article);
++
+     const body = article.content || article.summary;
+     const type = article.content_type || "text/markdown";
+     // Markdown -> HTML via marked; HTML feeds pass through as-is.
+@@ -166,6 +180,27 @@
+       : "Mark as read";
+   }
+ 
++  // Show the cached abstract, or a skeleton while the LLM generates it
++  function renderAbstract(article) {
++    const cached = abstracts[article.id];
++    if (typeof cached === "string") {
++      abstractContentEl.innerHTML = DOMPurify.sanitize(marked.parse(cached));
++      return;
++    }
++    const skeleton = document.createElement("div");
++    skeleton.className = "skeleton";
++    for (let i = 0; i < 3; i++) {
++      const line = document.createElement("div");
++      line.className = "skeleton-line";
++      skeleton.appendChild(line);
++    }
++    abstractContentEl.replaceChildren(skeleton);
++    if (cached === undefined) {
++      abstracts[article.id] = null; // mark requested
++      socket.emit("request_abstract", { id: article.id });
++    }
++  }
++
+   function buildArticleNode(article) {
+     const li = document.createElement("li");
+     li.className = "article";
+diff --git a/assets/index.html b/assets/index.html
+index ff4f522..c209175 100644
+--- a/assets/index.html
++++ b/assets/index.html
+@@ -66,6 +66,10 @@ SPDX-License-Identifier: MPL-2.0
+               <p class="detail-eyebrow">Article</p>
+               <h1 class="detail-title" id="detail-title"></h1>
+               <div class="detail-meta" id="detail-meta"></div>
++              <section class="abstract" id="abstract">
++                <p class="abstract-label">Abstract</p>
++                <div class="abstract-content" id="abstract-content"></div>
++              </section>
+               <div class="detail-body" id="detail-body"></div>
+               <footer class="detail-footer">
+                 <button
+diff --git a/python/main.py b/python/main.py
+index 9ac3ce2..1c5e32f 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -26,6 +26,7 @@ llm.with_memory(0)
+ ui = WebUI()
+ 
+ articles: dict[str, dict] = {}
++abstracts: dict[str, str] = {}  # article id -> cached LLM abstract
+ 
+ 
+ def broadcast_articles(room: str | None = None):
+@@ -80,6 +81,10 @@ def poll_feed():
+         del new_articles[oldest]
+     articles = new_articles
+ 
++    # Drop cached abstracts for articles that left the feed.
++    for stale in [aid for aid in abstracts if aid not in articles]:
++        del abstracts[stale]
++
+     logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
+     broadcast_articles()
+     notify_unread()
+@@ -96,9 +101,27 @@ def set_read(data, value: bool):
+     notify_unread()
+ 
+ 
++def make_abstract(sid, data):
++    aid = (data or {}).get("id")
++    if not aid or aid not in articles:
++        return
++    text = abstracts.get(aid)
++    if text is None:
++        logger.info(f"Generating abstract for {aid}")
++        try:
++            text = llm.chat(articles[aid]["content"][:6000])
++        except Exception as e:
++            logger.error(f"Abstract generation failed for {aid}: {e}")
++            ui.send_message("abstract", {"id": aid, "error": True}, room=sid)
++            return
++        abstracts[aid] = text
++    ui.send_message("abstract", {"id": aid, "text": text}, room=sid)
++
++
+ ui.on_connect(lambda sid: broadcast_articles(room=sid))
+ ui.on_message("mark_read", lambda _sid, data: set_read(data, True))
+ ui.on_message("mark_unread", lambda _sid, data: set_read(data, False))
++ui.on_message("request_abstract", make_abstract)
+ 
+ 
+ @ui.app.middleware("http")

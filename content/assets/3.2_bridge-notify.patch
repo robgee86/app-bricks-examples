@@ -1,0 +1,65 @@
+diff --git a/python/main.py b/python/main.py
+index 2b379f8..df32840 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -8,7 +8,7 @@ from calendar import timegm
+ import feedparser
+ 
+ from arduino.app_bricks.web_ui import WebUI
+-from arduino.app_utils import App, Logger
++from arduino.app_utils import App, Bridge, Logger
+ 
+ 
+ FEED_URL = "http://192.168.1.5:7000/feed.xml"
+@@ -28,6 +28,12 @@ def broadcast_articles(room: str | None = None):
+     ui.send_message("articles_update", {"articles": snapshot}, room=room)
+ 
+ 
++def notify_unread():
++    # Tell the sketch how many unread articles there are, over the Bridge.
++    count = sum(1 for a in articles.values() if not a["read"])
++    Bridge.notify("unread_count", count)
++
++
+ def poll_feed():
+     # feedparser.parse() sets bozo=1 on errors and leaves entries empty
+     parsed = feedparser.parse(FEED_URL)
+@@ -71,6 +77,7 @@ def poll_feed():
+ 
+     logger.info(f"{len(parsed.entries)} entries received, {len(articles)} stored")
+     broadcast_articles()
++    notify_unread()
+ 
+     time.sleep(POLL_INTERVAL_SECONDS)
+ 
+@@ -81,6 +88,7 @@ def set_read(data, value: bool):
+         return
+     article["read"] = value
+     broadcast_articles()
++    notify_unread()
+ 
+ 
+ ui.on_connect(lambda sid: broadcast_articles(room=sid))
+diff --git a/sketch/sketch.ino b/sketch/sketch.ino
+index 0eeb35b..f5812c6 100644
+--- a/sketch/sketch.ino
++++ b/sketch/sketch.ino
+@@ -2,9 +2,18 @@
+ //
+ // SPDX-License-Identifier: MPL-2.0
+ 
++#include <Arduino_RouterBridge.h>
++
++void on_unread_count(int count) {
++  Serial.print("Unread articles: ");
++  Serial.println(count);
++}
++
+ void setup() {
+   Serial.begin(9600);
+   Serial.println("RSS reader sketch ready");
++  Bridge.begin();
++  Bridge.provide("unread_count", on_unread_count);
+ }
+ 
+ void loop() {

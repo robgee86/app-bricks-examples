@@ -1,0 +1,62 @@
+diff --git a/sketch/frames.h b/sketch/frames.h
+new file mode 100644
+index 0000000..027200d
+--- /dev/null
++++ b/sketch/frames.h
+@@ -0,0 +1,14 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (C) Arduino s.r.l. and/or its affiliated companies
++ *
++ * SPDX-License-Identifier: MPL-2.0
++ */
++
++// Placeholder icon shown when there are unread articles.
++// Reuses an existing LED-matrix frame; swap in your own glyph later.
++const uint32_t unread_icon[] = {
++    0x0f808209,
++    0x484042fa,
++    0x14509c82,
++    0x08000000,
++};
+diff --git a/sketch/sketch.ino b/sketch/sketch.ino
+index f272a5b..58c76df 100644
+--- a/sketch/sketch.ino
++++ b/sketch/sketch.ino
+@@ -3,6 +3,10 @@
+ // SPDX-License-Identifier: MPL-2.0
+ 
+ #include <Arduino_RouterBridge.h>
++#include <Arduino_LED_Matrix.h>
++#include "frames.h"
++
++Arduino_LED_Matrix matrix;
+ 
+ volatile int unread_count = 0;
+ 
+@@ -14,19 +18,19 @@ void on_unread_count(int count) {
+ 
+ void setup() {
+   Serial.begin(9600);
++
++  matrix.begin();
++  matrix.clear();
++
+   Bridge.begin();
+   Bridge.provide("unread_count", on_unread_count);
+ }
+ 
+ void loop() {
+   if (unread_count > 0) {
+-    // Blink while there are unread articles.
+-    digitalWrite(LED_BUILTIN, HIGH);
+-    delay(300);
+-    digitalWrite(LED_BUILTIN, LOW);
+-    delay(300);
++    matrix.loadFrame(unread_icon);
+   } else {
+-    digitalWrite(LED_BUILTIN, LOW);
+-    delay(300);
++    matrix.clear();
+   }
++  delay(300);
+ }

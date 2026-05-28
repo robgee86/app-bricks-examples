@@ -1,0 +1,100 @@
+diff --git a/assets/app.js b/assets/app.js
+index 2e92acf..744feab 100644
+--- a/assets/app.js
++++ b/assets/app.js
+@@ -7,6 +7,9 @@
+   const listEl = document.getElementById("article-list");
+   const emptyEl = document.getElementById("empty-state");
+   const reloadBtn = document.getElementById("reload-btn");
++  const unreadCountEl = document.getElementById("unread-count");
++  const unreadChipEl = document.getElementById("unread-chip");
++  const markAllBtn = document.getElementById("mark-all-read");
+ 
+   const detailEl = document.getElementById("article-detail");
+   const detailTitleEl = document.getElementById("detail-title");
+@@ -26,6 +29,36 @@
+     }
+   });
+ 
++  markAllBtn.addEventListener("click", () => {
++    articles
++      .filter((a) => !a.read)
++      .forEach((a) => {
++        a.read = true;
++      });
++    render();
++  });
++
++  backBtn.addEventListener("click", () => {
++    selectedId = null;
++    render();
++  });
++
++  detailToggleBtn.addEventListener("click", () => {
++    const article = currentSelection();
++    if (!article) return;
++    article.read = !article.read;
++    render();
++  });
++
++  function selectArticle(id) {
++    selectedId = id;
++    const article = articles.find((a) => a.id === id);
++    if (article && !article.read) {
++      article.read = true;
++    }
++    render();
++  }
++
+   function currentSelection() {
+     return selectedId ? articles.find((a) => a.id === selectedId) : null;
+   }
+@@ -41,6 +74,11 @@
+       feedPanelEl.hidden = false;
+       renderList();
+     }
++
++    const unread = articles.filter((a) => !a.read).length;
++    unreadCountEl.textContent = String(unread);
++    unreadChipEl.dataset.empty = unread === 0 ? "true" : "false";
++    markAllBtn.disabled = unread === 0;
+   }
+ 
+   function renderList() {
+@@ -137,6 +175,8 @@
+     li.appendChild(dot);
+     li.appendChild(body);
+ 
++    li.addEventListener("click", () => selectArticle(article.id));
++
+     updateArticleNode(li, article);
+     return li;
+   }
+diff --git a/assets/index.html b/assets/index.html
+index 4235e5e..323e23e 100644
+--- a/assets/index.html
++++ b/assets/index.html
+@@ -26,7 +26,12 @@ SPDX-License-Identifier: MPL-2.0
+             />
+             <p class="arduino-text">RSS Reader</p>
+           </div>
+-          <div class="header-right"></div>
++          <div class="header-right">
++            <span id="unread-chip" class="unread-chip">
++              <span class="unread-count" id="unread-count">0</span>
++              <span class="unread-label">unread</span>
++            </span>
++          </div>
+         </div>
+ 
+         <div class="main-content">
+@@ -36,6 +41,9 @@ SPDX-License-Identifier: MPL-2.0
+               <button id="reload-btn" class="ghost-btn" type="button">
+                 Reload
+               </button>
++              <button id="mark-all-read" class="ghost-btn" type="button">
++                Mark all as read
++              </button>
+             </div>
+ 
+             <ul id="article-list" class="article-list" aria-live="polite"></ul>

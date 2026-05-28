@@ -1,0 +1,35 @@
+diff --git a/assets/app.js b/assets/app.js
+index 306b6dd..2e92acf 100644
+--- a/assets/app.js
++++ b/assets/app.js
+@@ -6,6 +6,7 @@
+   const feedPanelEl = document.getElementById("feed-panel");
+   const listEl = document.getElementById("article-list");
+   const emptyEl = document.getElementById("empty-state");
++  const reloadBtn = document.getElementById("reload-btn");
+ 
+   const detailEl = document.getElementById("article-detail");
+   const detailTitleEl = document.getElementById("detail-title");
+@@ -219,6 +220,8 @@
+       });
+   }
+ 
++  reloadBtn.addEventListener("click", loadArticles);
++
+   render();
+   loadArticles();
+ })();
+diff --git a/assets/index.html b/assets/index.html
+index 3cde85e..4235e5e 100644
+--- a/assets/index.html
++++ b/assets/index.html
+@@ -33,6 +33,9 @@ SPDX-License-Identifier: MPL-2.0
+           <section class="feed-panel" id="feed-panel">
+             <div class="feed-panel-header">
+               <h2 class="feed-title">Latest articles</h2>
++              <button id="reload-btn" class="ghost-btn" type="button">
++                Reload
++              </button>
+             </div>
+ 
+             <ul id="article-list" class="article-list" aria-live="polite"></ul>

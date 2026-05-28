@@ -1,0 +1,35 @@
+diff --git a/app.yaml b/app.yaml
+index d6623de..b06cb1a 100644
+--- a/app.yaml
++++ b/app.yaml
+@@ -4,3 +4,7 @@ description: A simple RSS reader application using Arduino bricks
+ 
+ bricks:
+   - arduino:web_ui
++  - arduino:llm:
++      variables:
++        X_LLAMA_ARG_CTX_SIZE: 65536
++        GENAI_CONTEXT_CAPPING: 65536
+diff --git a/python/main.py b/python/main.py
+index df32840..9ac3ce2 100644
+--- a/python/main.py
++++ b/python/main.py
+@@ -8,6 +8,7 @@ from calendar import timegm
+ import feedparser
+ 
+ from arduino.app_bricks.web_ui import WebUI
++from arduino.app_bricks.llm import LargeLanguageModel
+ from arduino.app_utils import App, Bridge, Logger
+ 
+ 
+@@ -18,6 +19,10 @@ POLL_INTERVAL_SECONDS = 10
+ logger = Logger("rss-reader")
+ logger.info(f"FEED_URL={FEED_URL} poll_interval={POLL_INTERVAL_SECONDS}s")
+ 
++prompt = "You are a news article summarizer. Respond with a few short markdown sentences. No preamble."
++llm = LargeLanguageModel(model="llamacpp:gemma-4-E2B-it-Q4_0_PURE", system_prompt=prompt)
++llm.with_memory(0)
++
+ ui = WebUI()
+ 
+ articles: dict[str, dict] = {}
