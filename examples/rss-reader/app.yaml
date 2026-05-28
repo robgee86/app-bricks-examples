@@ -8,3 +8,4 @@ bricks:
       variables:
         X_LLAMA_ARG_CTX_SIZE: 65536
         GENAI_CONTEXT_CAPPING: 65536
+  - rss-reader:
