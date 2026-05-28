@@ -22,11 +22,9 @@ We wire that into three functions: `broadcast_articles()` (sends the full sorted
 
 On the client we drop the `fetch`/`loadArticles` plumbing and connect a socket.io client to the same origin. Three handlers — `connect`, `disconnect`, `reconnect_attempt` — drive a small status chip in the header so you can see when things go offline. `articles_update` replaces `articles` in place and re-renders. The mark actions become `socket.emit("mark_read", { id })`-style calls; the server round-trips back through `broadcast_articles`, which is what triggers the re-render.
 
-One thing to call out about the client render: **we reconcile in place**. Instead of `replaceChildren` on every update, we walk the existing card nodes and patch them. That keeps each card's slide-in animation from re-firing on every poll, which was visually noisy.
-
 Two pieces of UI come and go in this step:
 
 - The **Reload button** disappears — pushes obsolete it.
 - A **connection-status chip** ("Live" / "Reconnecting" / "Offline") shows up in the header now that there's a connection to talk about.
 
-**Checkpoint:** open the reader in two browser tabs. In tab A, click an article. The unread count drops in **both** tabs (server is authoritative now). Add an article in the rss-server's director — both reader tabs receive it within ~10 seconds without anyone clicking anything.
+**Checkpoint:** open the reader in two browser tabs. In tab A, click an article. The unread count drops in **both** tabs (server is authoritative now). When an article is added by rss-server's director — both reader tabs receive it within ~10 seconds without anyone clicking anything.

@@ -9,7 +9,7 @@ attachments:
     label: rss-reader after step 1.3
 ---
 
-`print` is fine for a one-liner; for a real app, you want a logger.
+`print` is fine for quick verification but it's not great for a longer-lived app — in the next step we'll use the brick's `Logger`, which gives us levels (info / warning / error) and a nicely tagged source.
 
 App Lab ships one in `arduino.app_utils`. We create a single logger tagged with the app name (`"rss-reader"`) at module scope, then route everything through it:
 

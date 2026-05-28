@@ -21,6 +21,6 @@ The patch changes both sides:
 
 Reload the page and you should see the cards appear in the feed panel. They're inert for now (clicking does nothing) — interactivity arrives in step 2.3.
 
-> Try this: tweak the articles in the rss-server's director (add or remove a couple), then hit refresh in the reader. The list updates on every reload because the page calls `/articles` on load. We'll make it live in the next milestone.
+> Try this: if the rss-server's director add or remove articles, hit refresh in the reader. The list updates on every reload because the page calls `/articles` on load. We'll make it live in the next milestone.
 
 **Checkpoint:** the reader shows the same articles the rss-server is currently publishing.

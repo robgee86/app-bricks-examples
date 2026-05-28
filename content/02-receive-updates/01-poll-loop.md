@@ -20,4 +20,4 @@ Two small but important details land here:
 
 The UI hasn't changed — it still fetches `/articles` once at page load (from step 1.4). What changed is that the backend's `articles` dict now refreshes itself in the background. To **see** an update, the participant has to reload the page. That's exactly what step 2.2 fixes.
 
-**Checkpoint:** add an article in the rss-server's director, wait up to 10 seconds, reload the reader. The new article is on the list.
+**Checkpoint:** when the rss-server's director add an article, wait up to 10 seconds and then reload the reader. The new article is on the list.

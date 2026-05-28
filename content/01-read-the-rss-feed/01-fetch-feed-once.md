@@ -13,14 +13,14 @@ attachments:
 
 The starter project serves a styled but empty UI. Our first job is to actually go get the articles.
 
-We'll use the `feedparser` library to fetch the Atom feed served by the rss-server, normalize each entry into a plain dict, and stash them in a module-level `articles` dictionary keyed by entry id. This first version runs **once at startup** — we'll turn it into a continuous poll in milestone 2.
+We'll use the `feedparser` library to fetch the feeds served by the rss-server, normalize each entry into a plain dict, and stash them in a module-level `articles` dictionary keyed by entry id. This first version runs **once at startup** — we'll turn it into a continuous poll in milestone 2.
 
 A few things to notice in the patch:
 
-- **`MAX_ARTICLES`** joins `FEED_URL` (which you configured in the intro) at the top of the file. It caps the in-memory mirror so a runaway feed can't grow without bound.
-- **`feedparser.parse()` never throws.** On a malformed feed or a network error it sets `parsed.bozo = 1` and leaves `parsed.entries` empty. We guard on that and `print` a warning — good enough for now; in step 1.3 this becomes a proper `logger.warning`.
+- **`MAX_ARTICLES`** and **`FEED_URL`** (which you configured in the intro) are added at the top of the file. It caps the in-memory mirror so a runaway feed can't grow without bound.
+- **`feedparser.parse()`** never throws. On a malformed feed or a network error it sets `parsed.bozo = 1` and leaves `parsed.entries` empty. We guard on that and `print` a warning — good enough for now; in step 1.3 this becomes a proper `logger.warning`.
 - We **mirror only what we need** out of each entry: `id`, `title`, `summary` (+ its mime type), `content` (+ its mime type), an integer-ms `published` timestamp, and a `read: False` flag. Keeping the model small now will pay off across the next few steps.
-- **`MAX_ARTICLES` eviction** at the end keeps the dict bounded by dropping the oldest entries.
+- **`MAX_ARTICLES`** eviction at the end keeps the dict bounded by dropping the oldest entries.
 
 Nothing is on screen yet — the UI still shows "Waiting for articles…". That's fine; we're wiring the data path first, then surfacing it in step 1.4.
 
