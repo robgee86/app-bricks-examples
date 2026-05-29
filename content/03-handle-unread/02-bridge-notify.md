@@ -9,7 +9,7 @@ attachments:
     label: rss-reader after step 3.2
 ---
 
-How does the Python half talk to the sketch? Through the **Bridge** — a small RPC channel App Lab gives you for free. Two flavors:
+How does the Python talk to the sketch? Through the **Bridge** — a small RPC channel App Lab provides. Two flavors:
 
 - **`Bridge.call(name, *args)`** — request-response. Use when you want a return value from the sketch.
 - **`Bridge.notify(name, *args)`** — fire-and-forget. Use when you just want to push something.

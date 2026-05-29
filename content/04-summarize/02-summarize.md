@@ -18,12 +18,7 @@ Design choices baked in:
 - **Server-side cache** keyed by article id. The first `request_abstract` for an id calls the LLM and stores the result in an `abstracts` dict. Subsequent requests (e.g. from another browser tab) hit the cache. The `poll_feed()` function prunes stale entries when articles leave the feed.
 - **Markdown out → Markdown in.** The system prompt tells the LLM to return "a few short markdown sentences". The client renders that through `marked.parse` + `DOMPurify.sanitize` — same pipeline used for the article body.
 
-The patch touches all three files:
-
-- **`main.py`** gets an `abstracts: dict[str, str]` cache, a `make_abstract(sid, data)` handler that wraps `llm.chat(...)` (with a 6 K-char input cap as a safety belt), and one extra `ui.on_message("request_abstract", make_abstract)`. The poll loop drops cache entries for evicted articles.
-- **`app.js`** picks up an `abstracts = {}` map and a `renderAbstract(article)` function that either renders the cached text or paints a three-line skeleton **and** emits `request_abstract`. A `socket.on("abstract", ...)` handler fills the cache and re-paints the detail view if it's still on screen.
-- **`index.html`** gains the `<section class="abstract">` markup. The CSS for the skeleton and the abstract card is already in the stylesheet — we front-loaded it back in `0.2`.
+The patch modifies `main.py` to add server-side abstract caching, a length-capped LLM generation handler, a new message event listener, and automated cache eviction during the polling loop. It updates `app.js` to manage a client-side abstract map, implement asynchronous rendering with skeleton loading states, and handle real-time socket events for UI updates. Finally, it alters `index.html` to integrate the structural markup required to house the new abstract section in the layout.
 
 **Checkpoint:** open an article you haven't seen before. The Abstract section pulses with three skeleton lines for a moment, then a short summary appears. Close it, reopen it — the summary is instant. Open the same article in a second tab — also instant (server-side cache).
 
-🎉 That's the workshop. Head to the outro for places to go from here.

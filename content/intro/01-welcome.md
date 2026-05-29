@@ -28,4 +28,6 @@ Every step ends with two things you can reach for:
 
 Some steps have an optional **◇ Side quest** at the bottom — interesting detours that don't count toward progress. The **Outro** has three of them; pick whichever direction you want to keep exploring.
 
-**Checkpoint:** the rss-reader is running and shows its empty state
+## Setup
+
+If you don't have it already, please download the App Lab https://www.arduino.cc/en/software/#app-lab-section

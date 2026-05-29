@@ -9,7 +9,7 @@ attachments:
     label: rss-reader after step 3.1
 ---
 
-App Lab apps can have **two halves**: a Python "MPU" half (what we've been building) and a sketch "MCU" half compiled to the microcontroller. They live in the same project, and App Lab handles building, flashing and running both.
+App Lab apps can have **two components**: a Python "MPU" (what we've been building) and a sketch "MCU" compiled to the microcontroller. They live in the same project, and App Lab handles building, flashing and running both.
 
 The presence of a `sketch/` folder with a `sketch.yaml` is all it takes — there's no extra brick to add to `app.yaml`. We create:
 

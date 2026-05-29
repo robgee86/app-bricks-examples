@@ -9,7 +9,7 @@ attachments:
     label: rss-reader after step 4.1
 ---
 
-App Lab ships a `LargeLanguageModel` brick — a clean wrapper around a local llama.cpp-backed model running on the board. We're going to use it to summarize articles on demand. But first: install and configure it, without changing any behavior yet. That keeps the setup step easy to verify on its own.
+App Lab ships a `Large Language Model` brick — a clean wrapper around a local llama.cpp-backed model running on the board. We're going to use it to summarize articles on demand. But first: install and configure it, without changing any behavior yet. That keeps the setup step easy to verify on its own.
 
 Two surface-level changes:
 

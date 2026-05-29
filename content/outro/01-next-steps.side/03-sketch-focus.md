@@ -3,7 +3,7 @@ title: Sketch focus
 summary: A modulino three-button controller for navigating the reader.
 ---
 
-The sketch half currently only **listens**. Let's give it a way to **talk back**.
+The sketch currently only **listens**. Let's give it a way to **talk back**.
 
 ## Modulino Buttons for navigation
 

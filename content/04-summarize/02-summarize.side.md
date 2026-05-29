@@ -25,9 +25,3 @@ Try swapping it for something more opinionated. A few starting points:
   > Ye be a pirate captain. Summarize this article in 2–3 short markdown sentences. Use light pirate-speak; do not be obnoxious about it.
 
 Edit `prompt = ...` in `main.py`, restart the app, and refresh the page. Open an article you've never opened before (so the cache doesn't serve you the previous personality's summary) — and you'll see the new voice.
-
-## Going further
-
-- **Per-user personality.** Move the system prompt into a setting the UI exposes — a small dropdown in the header that the client sends along with `request_abstract`. The server uses whatever prompt the user picked. (You'll want to invalidate the cache when the prompt changes.)
-- **Stream the summary.** `LargeLanguageModel` has a `chat_stream` variant that yields tokens as they're generated. Stream those down the same websocket and append to the abstract panel — the perceived latency drops a lot.
-- **Constrain the format.** Ask for a JSON object (`{"summary": "...", "tags": ["..."]}`), parse on the server, and render tags as little chips next to the title.
