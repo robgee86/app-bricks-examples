@@ -31,3 +31,5 @@ Some steps have an optional **◇ Side quest** at the bottom — interesting det
 ## Setup
 
 If you don't have it already, please download the App Lab https://www.arduino.cc/en/software/#app-lab-section
+
+> **If you are prompted to update some system packages by App Lab, it's important to press "SKIP".**
