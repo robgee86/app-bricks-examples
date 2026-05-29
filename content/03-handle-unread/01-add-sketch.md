@@ -13,6 +13,7 @@ App Lab apps can have **two components**: a Python "MPU" (what we've been buildi
 
 The presence of a `sketch/` folder with a `sketch.yaml` is all it takes — there's no extra brick to add to `app.yaml`. We create:
 
+- **`sketch/`** - the folder that hosts sketch related files.
 - **`sketch/sketch.yaml`** — a tiny profile file pinning the target platform (`arduino:zephyr` for the UNO Q).
 - **`sketch/sketch.ino`** — a no-op sketch right now: `Serial.begin(9600)` and an empty loop with a `delay(1000)` to keep things quiet. We'll fill it with real logic over the next three steps.
 
